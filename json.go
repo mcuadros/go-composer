@@ -35,6 +35,7 @@ func main() {
     if err != nil {
         panic(err)
     }
+    
     fmt.Printf("PHP:: %s\n", u.Require["php"])
     fmt.Printf("Project: %v\n", u.Name)
 }
