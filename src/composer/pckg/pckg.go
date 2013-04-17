@@ -1,24 +1,43 @@
 package pckg
 
 import (
+	"composer/net"
+	"encoding/json"
 	"fmt"
 )
 
 type Pckg struct {
-	Version  string
-	Require  map[string]string
-	Autoload *Autoload
-	Source   *Source
+	Name     string
+	Versions []*Version
 }
 
-type Autoload struct {
-	PSR0     map[string]string
-	ClassMap map[string]string
-	Files    map[string]string
+func (self *Pckg) Print() {
+	self.request()
+
+	fmt.Printf("Package: %s\n", self.Name)
+	for _, version := range self.Versions {
+		version.Print()
+	}
 }
 
-func (p Pckg) Print() {
-	fmt.Printf("Version: %s, Require: %s\n", p.Version, p.Require)
-	fmt.Printf("Source:\n")
-	p.Source.Print()
+func (self *Pckg) request() bool {
+	packagist := net.Packagist{}
+	versions := packagist.GetRawVersion(self.Name)
+
+	for number, raw := range versions {
+		version := Version{}
+		err := json.Unmarshal(raw, &version)
+		if err != nil {
+			return false
+		}
+
+		self.addVersion(&version)
+		version.Number = number
+	}
+
+	return true
+}
+
+func (self *Pckg) addVersion(version *Version) {
+	self.Versions = append(self.Versions, version)
 }

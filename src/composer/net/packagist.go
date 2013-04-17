@@ -1,7 +1,6 @@
 package net
 
 import (
-	"composer/pckg"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,18 +10,15 @@ import (
 type Packagist struct {
 	Name     string
 	Raw      []byte
-	Response *response
+	Response struct {
+		Packages map[string]map[string]json.RawMessage
+	}
 }
 
-type response struct {
-	Packages map[string]map[string]*pckg.Pckg
-}
-
-func (p *Packagist) request() bool {
+func (self *Packagist) request() bool {
 	base := "http://packagist.org/p/%s.json"
-	fmt.Println(fmt.Sprintf(base, p.Name))
 
-	res, err := http.Get(fmt.Sprintf(base, p.Name))
+	res, err := http.Get(fmt.Sprintf(base, self.Name))
 	if err != nil {
 		return false
 	}
@@ -33,27 +29,25 @@ func (p *Packagist) request() bool {
 		return false
 	}
 
-	p.Raw = raw
+	self.Raw = raw
 
 	return true
 }
 
-func (p *Packagist) unmarshal() bool {
-	err := json.Unmarshal(p.Raw, &p.Response)
+func (self *Packagist) unmarshal() bool {
+	err := json.Unmarshal(self.Raw, &self.Response)
 	if err != nil {
 		return false
 	}
 
-	fmt.Println(p.Name)
-
 	return true
 }
 
-func (p *Packagist) GetPackage(pckgName string) map[string]*pckg.Pckg {
-	p.Name = pckgName
+func (self *Packagist) GetRawVersion(pckgName string) map[string]json.RawMessage {
+	self.Name = pckgName
 
-	p.request()
-	p.unmarshal()
+	self.request()
+	self.unmarshal()
 
-	return p.Response.Packages[p.Name]
+	return self.Response.Packages[self.Name]
 }

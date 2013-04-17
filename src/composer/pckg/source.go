@@ -10,7 +10,6 @@ type Source struct {
 	Reference string
 }
 
-func (s Source) Print() {
-	fmt.Printf("\tType: %s, URL: %s\n", s.Type, s.Url)
-
+func (self *Source) Print() {
+	fmt.Printf("\tType: %s, URL: %s\n", self.Type, self.Url)
 }
