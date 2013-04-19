@@ -1,7 +1,6 @@
 package console
 
 import (
-	"fmt"
 	"github.com/jessevdk/go-flags"
 	"github.com/mcuadros/console/output"
 )
@@ -9,18 +8,25 @@ import (
 type Application struct {
 	command  string
 	commands map[string]*Command
-	options  struct {
-		Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
-	}
+	options  options
+	output   output.Output
+}
+
+type options struct {
+	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+	Help    []bool `short:"h" long:"help" description:"Display this help message."`
+}
+
+func NewApplication(name string) *Application {
+	return new(Application)
 }
 
 func (self *Application) Run(output output.Output) (result bool) {
-	self.commands["test"] = new(Command)
+	self.output = output
 
-	output.Emergency("Test")
 	args, _ := self.parse()
 	if len(args) != 1 {
-		fmt.Printf("Missing command")
+		self.output.Error("Missing command")
 		return false
 	}
 
@@ -28,18 +34,19 @@ func (self *Application) Run(output output.Output) (result bool) {
 	return self.execute()
 }
 
-func (self *Application) Add(name string, command *Command) {
+func (self *Application) Add(cmd *Command) {
 	if self.commands == nil {
 		self.commands = make(map[string]*Command)
 	}
 
-	self.commands[name] = command
+	self.commands[cmd.GetName()] = cmd
 }
 
 func (self *Application) execute() (result bool) {
 	if cmd, ok := self.commands[self.command]; ok {
-		fmt.Printf("Executing command: %s", self.command)
-		cmd.Run()
+		self.output.Write("Executing command @{!}%s\n", output.NOTICE, self.command)
+
+		cmd.Run(self.output)
 	}
 
 	return false
@@ -47,29 +54,4 @@ func (self *Application) execute() (result bool) {
 
 func (self *Application) parse() ([]string, error) {
 	return flags.NewParser(&self.options, flags.HelpFlag|flags.PassDoubleDash).Parse()
-}
-
-type Command struct {
-	name    string
-	options struct {
-		Some []bool `short:"s" long:"some" description:"Show verbose debug information" required:"true"`
-	}
-}
-
-func (self *Command) parse() ([]string, error) {
-	return flags.NewParser(&self.options, flags.HelpFlag|flags.PassDoubleDash).Parse()
-}
-
-func (self *Command) Run() (result bool) {
-	args, err := self.parse()
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return false
-	}
-
-	for index, value := range args {
-		fmt.Printf("\tType: %s, URL: %s\n", index, value)
-	}
-
-	return true
 }
