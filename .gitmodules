@@ -1,0 +1,3 @@
+[submodule "src/github.com/wsxiaoys/terminal"]
+	path = src/github.com/wsxiaoys/terminal
+	url = git@github.com:wsxiaoys/terminal.git
