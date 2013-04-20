@@ -17,21 +17,11 @@ type options struct {
 	Help    []bool `short:"h" long:"help" description:"Display this help message."`
 }
 
-func NewApplication(name string) *Application {
-	return new(Application)
-}
+func NewApplication() *Application {
+	app := new(Application)
+	app.Add(NewHelpCommand())
 
-func (self *Application) Run(output output.Output) (result bool) {
-	self.output = output
-
-	args, _ := self.parse()
-	if len(args) != 1 {
-		self.output.Error("Missing command")
-		return false
-	}
-
-	self.command = args[0]
-	return self.execute()
+	return app
 }
 
 func (self *Application) Add(cmd *Command) {
@@ -42,16 +32,39 @@ func (self *Application) Add(cmd *Command) {
 	self.commands[cmd.GetName()] = cmd
 }
 
+func (self *Application) Run(output output.Output) (result bool) {
+	self.output = output
+
+	args, _ := self.parse()
+	if len(args) == 0 {
+		self.output.Error("Missing command")
+		return false
+	}
+
+	self.command = args[0]
+	return self.execute()
+}
+
+func (self *Application) GetOutput() output.Output {
+	return self.output
+}
+
+func (self *Application) GetCommands() map[string]*Command {
+	return self.commands
+}
+
 func (self *Application) execute() (result bool) {
 	if cmd, ok := self.commands[self.command]; ok {
 		self.output.Write("Executing command @{!}%s\n", output.NOTICE, self.command)
 
-		cmd.Run(self.output)
+		cmd.Run(self)
 	}
 
 	return false
 }
 
 func (self *Application) parse() ([]string, error) {
-	return flags.NewParser(&self.options, flags.HelpFlag|flags.PassDoubleDash).Parse()
+
+	parser := flags.NewParser(&self.options, flags.HelpFlag|flags.PassDoubleDash|flags.IgnoreUnknown)
+	return parser.Parse()
 }
