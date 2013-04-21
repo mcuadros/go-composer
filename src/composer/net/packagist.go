@@ -1,6 +1,8 @@
 package net
 
 import (
+	"composer/misc"
+
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -17,8 +19,9 @@ type Packagist struct {
 
 func (self *Packagist) request() bool {
 	base := "http://packagist.org/p/%s.json"
+	url := fmt.Sprintf(base, self.Name)
 
-	res, err := http.Get(fmt.Sprintf(base, self.Name))
+	res, err := http.Get(url)
 	if err != nil {
 		return false
 	}
@@ -30,6 +33,7 @@ func (self *Packagist) request() bool {
 	}
 
 	self.Raw = raw
+	misc.GetOutput().Debug("Url: %s (%d bytes)", url, len(raw))
 
 	return true
 }

@@ -7,8 +7,38 @@ import (
 )
 
 type Pckg struct {
-	Name     string
-	Versions []*Version
+	Name      string
+	Versions  map[string]*Version
+	requested bool
+}
+
+func NewPckg(name string) *Pckg {
+	pckg := new(Pckg)
+	pckg.SetName(name)
+
+	return pckg
+}
+
+func (self *Pckg) GetVersion(name string) (*Version, error) {
+	self.request()
+
+	if version, ok := self.Versions[name]; ok {
+		return version, nil
+	}
+
+	for _, version := range self.Versions {
+		return version, nil
+	}
+
+	return nil, fmt.Errorf("cannot find given version %s at %s", name, self.Name)
+}
+
+func (self *Pckg) GetName() string {
+	return self.Name
+}
+
+func (self *Pckg) SetName(name string) {
+	self.Name = name
 }
 
 func (self *Pckg) Print() {
@@ -16,11 +46,15 @@ func (self *Pckg) Print() {
 
 	fmt.Printf("Package: %s\n", self.Name)
 	for _, version := range self.Versions {
-		version.Print()
+		fmt.Printf("\t%-20s (%-20s)\n", version.Name, version.Version)
 	}
 }
 
 func (self *Pckg) request() bool {
+	if self.requested {
+		return true
+	}
+
 	packagist := net.Packagist{}
 	versions := packagist.GetRawVersion(self.Name)
 
@@ -28,16 +62,23 @@ func (self *Pckg) request() bool {
 		version := Version{}
 		err := json.Unmarshal(raw, &version)
 		if err != nil {
-			return false
+			fmt.Printf("Version: %s Error:%s Data:%s\n", number, err)
+
+			//return false
 		}
 
-		self.addVersion(&version)
-		version.Number = number
+		self.addVersion(number, &version)
+
 	}
 
+	self.requested = true
 	return true
 }
 
-func (self *Pckg) addVersion(version *Version) {
-	self.Versions = append(self.Versions, version)
+func (self *Pckg) addVersion(number string, version *Version) {
+	if self.Versions == nil {
+		self.Versions = make(map[string]*Version)
+	}
+
+	self.Versions[number] = version
 }
