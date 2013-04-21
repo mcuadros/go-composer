@@ -1,8 +1,8 @@
 package pckg
 
 import (
+	"composer/misc"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -23,7 +23,6 @@ type Autoload struct {
 
 func (self *Version) GetDependencies() []*Version {
 	requires := make([]*Version, 0)
-	//fmt.Printf("Looking for dependencies of %s\n", self.Name)
 
 	for require, version := range self.Require {
 		if require == "php" {
@@ -36,7 +35,7 @@ func (self *Version) GetDependencies() []*Version {
 
 		version, err := NewPckg(require).GetVersion(version)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			misc.GetOutput().Error(err.Error())
 			return nil
 		}
 

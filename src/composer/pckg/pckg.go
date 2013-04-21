@@ -12,11 +12,17 @@ type Pckg struct {
 	requested bool
 }
 
-func NewPckg(name string) *Pckg {
-	pckg := new(Pckg)
-	pckg.SetName(name)
+var cache = make(map[string]*Pckg, 0)
 
-	return pckg
+func NewPckg(name string) *Pckg {
+	if pckg, ok := cache[name]; ok {
+		return pckg
+	}
+
+	cache[name] = new(Pckg)
+	cache[name].SetName(name)
+
+	return cache[name]
 }
 
 func (self *Pckg) GetVersion(name string) (*Version, error) {
@@ -63,8 +69,6 @@ func (self *Pckg) request() bool {
 		err := json.Unmarshal(raw, &version)
 		if err != nil {
 			fmt.Printf("Version: %s Error:%s Data:%s\n", number, err)
-
-			//return false
 		}
 
 		self.addVersion(number, &version)
