@@ -1,6 +1,7 @@
 package pckg
 
 import (
+	"composer/misc"
 	"composer/net"
 	"encoding/json"
 	"fmt"
@@ -31,6 +32,8 @@ func (self *Pckg) GetVersion(name string) (*Version, error) {
 	if version, ok := self.Versions[name]; ok {
 		return version, nil
 	}
+
+	misc.GetOutput().Warning("cannot find given version %s at %s", name, self.Name)
 
 	for _, version := range self.Versions {
 		return version, nil
