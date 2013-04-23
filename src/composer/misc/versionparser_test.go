@@ -1,6 +1,9 @@
 package misc
 
 import "testing"
+import (
+	"strings"
+)
 
 var versions = map[string]string{
 	"1-stable":            "1.0.0.0",
@@ -89,51 +92,69 @@ var simpleConstraints = map[string][]string{
 	"dev-CAPS":            []string{"=", "dev-CAPS"},
 	"dev-master as 1.0.0": []string{"=", "9999999-dev"},
 	"<1.2.3.4-stable":     []string{"<", "1.2.3.4"},
+
+	"<=3.0@dev":            []string{"<=", "3.0.0.0"},
+	"1.0@dev":              []string{"=", "1.0.0.0"},                 //IgnoresStabilityFlag
+	"1.0.x-dev#abcd123":    []string{"=", "1.0.9999999.9999999-dev"}, //IgnoresReferenceOnDevVersion
+	"1.0.x-dev#trunk/@123": []string{"=", "1.0.9999999.9999999-dev"}, //IgnoresReferenceOnDevVersion
+	//"1.0#abcd123":          []string{"=", "1.0.0.0"},                 //FailsOnBadReference
+	//"1.0#trunk/@123":       []string{"=", "1.0.0.0"},                 //FailsOnBadReference
 }
 
 func TestParseConstraints(t *testing.T) {
 	for in, out := range simpleConstraints {
-		if x := parseConstraints(in); x[0] != out[0] {
+		if x := parseConstraints(in); strings.Join(x, "-") != strings.Join(out, "-") {
 			t.Errorf("FAIL: parseConstraints(%v) = {%s}: want {%s}", in, x, out)
 		}
 	}
 }
 
-/*
-   "*":                   [2]string{nil, nil},
-   "*.*":                 [2]string{nil, nil},
-   "*.x.*":               [2]string{nil, nil},
-   "x.x.x.*":             [2]string{nil, nil},
-*/
-
-/*
 var wildcardConstraints = map[string][]string{
-
-
+	"2.*":     []string{">", "1.9999999.9999999.9999999", "<", "2.9999999.9999999.9999999"},
+	"20.*":    []string{">", "19.9999999.9999999.9999999", "<", "20.9999999.9999999.9999999"},
+	"2.0.*":   []string{">", "1.9999999.9999999.9999999", "<", "2.0.9999999.9999999"},
+	"2.2.x":   []string{">", "2.1.9999999.9999999", "<", "2.2.9999999.9999999"},
+	"2.10.x":  []string{">", "2.9.9999999.9999999", "<", "2.10.9999999.9999999"},
+	"2.1.3.*": []string{">", "2.1.2.9999999", "<", "2.1.3.9999999"},
+	"0.*":     []string{"", "", "<", "0.9999999.9999999.9999999"},
 }
 
-    public function wildcardConstraints()
-    {
-        return array(
-            "2.*":     new VersionConstraint(">": "1.9999999.9999999.9999999"): new VersionConstraint("<": "2.9999999.9999999.9999999")):
-            "20.*":    new VersionConstraint(">": "19.9999999.9999999.9999999"):new VersionConstraint("<": "20.9999999.9999999.9999999")):
-            "2.0.*":   new VersionConstraint(">": "1.9999999.9999999.9999999"): new VersionConstraint("<": "2.0.9999999.9999999")):
-            "2.2.x":   new VersionConstraint(">": "2.1.9999999.9999999"):       new VersionConstraint("<": "2.2.9999999.9999999")):
-            "2.10.x":  new VersionConstraint(">": "2.9.9999999.9999999"):       new VersionConstraint("<": "2.10.9999999.9999999")):
-            "2.1.3.*": new VersionConstraint(">": "2.1.2.9999999"):             new VersionConstraint("<": "2.1.3.9999999")):
-            "0.*":     null:                                                    new VersionConstraint("<": "0.9999999.9999999.9999999")):
-        );
-    }
-    public function tildeConstraints()
-    {
-        return "            "~1":         new VersionConstraint(">=": "1.0.0.0"):         new VersionConstraint("<": "2.0.0.0-dev")):
-            "~1.2":       new VersionConstraint(">=": "1.2.0.0"):         new VersionConstraint("<": "2.0.0.0-dev")):
-            "~1.2.3":     new VersionConstraint(">=": "1.2.3.0"):         new VersionConstraint("<": "1.3.0.0-dev")):
-            "~1.2.3.4":   new VersionConstraint(">=": "1.2.3.4"):         new VersionConstraint("<": "1.2.4.0-dev")):
-            "~1.2-beta":  new VersionConstraint(">=": "1.2.0.0-beta"):    new VersionConstraint("<": "2.0.0.0-dev")):
-            "~1.2-b2":    new VersionConstraint(">=": "1.2.0.0-beta2"):   new VersionConstraint("<": "2.0.0.0-dev")):
-            "~1.2-BETA2": new VersionConstraint(">=": "1.2.0.0-beta2"):   new VersionConstraint("<": "2.0.0.0-dev")):
-            "~1.2.2-dev": new VersionConstraint(">=": "1.2.2.0-dev"):     new VersionConstraint("<": "1.3.0.0-dev")):
-        );
-    }
-*/
+func TestParseConstraintsWildcardConstraints(t *testing.T) {
+	for in, out := range wildcardConstraints {
+		if x := parseConstraints(in); strings.Join(x, "-") != strings.Join(out, "-") {
+			t.Errorf("FAIL: parseConstraints(%v) = {%s}: want {%s}", in, x, out)
+		}
+	}
+}
+
+var tildeConstraints = map[string][]string{
+	"~1":         []string{">=", "1.0.0.0", "<", "2.0.0.0-dev"},
+	"~1.2":       []string{">=", "1.2.0.0", "<", "2.0.0.0-dev"},
+	"~1.2.3":     []string{">=", "1.2.3.0", "<", "1.3.0.0-dev"},
+	"~1.2.3.4":   []string{">=", "1.2.3.4", "<", "1.2.4.0-dev"},
+	"~1.2-beta":  []string{">=", "1.2.0.0-beta", "<", "2.0.0.0-dev"},
+	"~1.2-b2":    []string{">=", "1.2.0.0-beta2", "<", "2.0.0.0-dev"},
+	"~1.2-BETA2": []string{">=", "1.2.0.0-beta2", "<", "2.0.0.0-dev"},
+	"~1.2.2-dev": []string{">=", "1.2.2.0-dev", "<", "1.3.0.0-dev"},
+}
+
+func TestParseConstraintsTildeConstraints(t *testing.T) {
+	for in, out := range tildeConstraints {
+		if x := parseConstraints(in); strings.Join(x, "-") != strings.Join(out, "-") {
+			t.Errorf("FAIL: parseConstraints(%v) = {%s}: want {%s}", in, x, out)
+		}
+	}
+}
+
+var multiConstraints = map[string][]string{
+	">2.0,<=3.0":            []string{">", "2.0.0.0", "<=", "3.0.0.0"},
+	">2.0@stable,<=3.0@dev": []string{">", "2.0.0.0", "<=", "3.0.0.0-dev"},
+}
+
+func TestParseConstraintsMultiConstraints(t *testing.T) {
+	for in, out := range multiConstraints {
+		if x := parseConstraints(in); strings.Join(x, "-") != strings.Join(out, "-") {
+			t.Errorf("FAIL: parseConstraints(%v) = {%s}: want {%s}", in, x, out)
+		}
+	}
+}

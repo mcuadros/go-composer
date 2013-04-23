@@ -1,7 +1,6 @@
 package misc
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -144,14 +143,19 @@ func parseConstraints(constraint string) []string {
 	constraints := RegSplit(`\s*,\s*`, strings.Trim(constraint, " "))
 
 	if len(constraints) > 1 {
-		return []string{constraint, constraint}
+		output := make([]string, 0)
+		for _, part := range constraints {
+			output = append(output, parseConstraint(part)...)
+		}
+
+		return output
 	} else if len(constraints) == 0 {
-		return []string{constraint, constraint}
+		return []string{"000000", constraint}
 	} else {
 		return parseConstraint(constraints[0])
 	}
 
-	return []string{constraint, constraint}
+	return []string{"222333", constraint}
 }
 
 func parseConstraint(constraint string) []string {
@@ -160,8 +164,6 @@ func parseConstraint(constraint string) []string {
 
 	result := RegFind(`(?i)^([^,\s]+?)@(stable|RC|beta|alpha|dev)$`, constraint)
 	if result != nil {
-		fmt.Printf("%s\n", result)
-
 		constraint = result[1]
 		if result[2] != "stable" {
 			stabilityModifier = result[2]
@@ -176,21 +178,19 @@ func parseConstraint(constraint string) []string {
 	highVersion := ""
 	lowVersion := ""
 
-	fmt.Printf(">= %s\n", constraint)
-
 	result = RegFind(`(?i)^~(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?`+modifierRegex+`?$`, constraint)
 	if result != nil {
 		if len(result) > 4 && result[4] != "" {
 			last, _ := strconv.Atoi(result[3])
-			highVersion = result[1] + "." + result[2] + "." + string(last+1) + ".0-dev"
+			highVersion = result[1] + "." + result[2] + "." + strconv.Itoa(last+1) + ".0-dev"
 			lowVersion = result[1] + "." + result[2] + "." + result[3] + "." + result[4]
 		} else if len(result) > 3 && result[3] != "" {
 			last, _ := strconv.Atoi(result[2])
-			highVersion = result[1] + "." + string(last+1) + ".0.0-dev"
+			highVersion = result[1] + "." + strconv.Itoa(last+1) + ".0.0-dev"
 			lowVersion = result[1] + "." + result[2] + "." + result[3] + ".0"
 		} else {
 			last, _ := strconv.Atoi(result[1])
-			highVersion = string(last+1) + ".0.0.0-dev"
+			highVersion = strconv.Itoa(last+1) + ".0.0.0-dev"
 			if len(result) > 2 && result[2] != "" {
 				lowVersion = result[1] + "." + result[2] + ".0.0"
 			} else {
@@ -198,18 +198,22 @@ func parseConstraint(constraint string) []string {
 			}
 		}
 
-		if len(result) > 5 {
-			lowVersion = "-" + expandStability(result[5])
+		if len(result) > 5 && result[5] != "" {
+			lowVersion = lowVersion + "-" + expandStability(result[5])
 
 		}
 
-		if len(result) > 6 {
+		if len(result) > 6 && result[6] != "" {
 			lowVersion = lowVersion + result[6]
-
 		}
 
-		fmt.Printf("----------------------------->= %s\n", lowVersion)
-		fmt.Printf("< %s\n", highVersion)
+		if len(result) > 7 && result[7] != "" {
+			lowVersion = lowVersion + "-dev"
+		}
+
+		//fmt.Printf("----------------------------->= %s\n", lowVersion)
+		//fmt.Printf("-----------------------------< %s\n", highVersion)
+		return []string{">=", lowVersion, "<", highVersion}
 	}
 
 	result = RegFind(`^(\d+)(?:\.(\d+))?(?:\.(\d+))?\.[x*]$`, constraint)
@@ -218,33 +222,35 @@ func parseConstraint(constraint string) []string {
 			highVersion = result[1] + "." + result[2] + "." + result[3] + ".9999999"
 			if result[3] == "0" {
 				last, _ := strconv.Atoi(result[2])
-				lowVersion = result[1] + "." + string(last-1) + ".9999999.9999999"
+				lowVersion = result[1] + "." + strconv.Itoa(last-1) + ".9999999.9999999"
 			} else {
 				last, _ := strconv.Atoi(result[3])
-				lowVersion = result[1] + "." + result[2] + "." + string(last-1) + ".9999999"
+				lowVersion = result[1] + "." + result[2] + "." + strconv.Itoa(last-1) + ".9999999"
 			}
+
 		} else if len(result) > 2 && result[2] != "" {
-			highVersion = result[1] + "." + result[2] + "." + ".9999999.9999999"
+			highVersion = result[1] + "." + result[2] + ".9999999.9999999"
 			if result[2] == "0" {
 				last, _ := strconv.Atoi(result[1])
-				lowVersion = string(last-1) + ".9999999.9999999.9999999"
+				lowVersion = strconv.Itoa(last-1) + ".9999999.9999999.9999999"
 			} else {
 				last, _ := strconv.Atoi(result[2])
-				lowVersion = result[1] + "." + string(last-1) + ".9999999.9999999"
+				lowVersion = result[1] + "." + strconv.Itoa(last-1) + ".9999999.9999999"
 			}
+
 		} else {
 			highVersion = result[1] + ".9999999.9999999.9999999"
 			if result[1] == "0" {
-				return []string{"<", highVersion}
+				return []string{"", "", "<", highVersion}
 			} else {
 				last, _ := strconv.Atoi(result[1])
-
-				lowVersion = string(last-1) + ".9999999.9999999.9999999"
+				lowVersion = strconv.Itoa(last-1) + ".9999999.9999999.9999999"
 			}
 		}
 
-		fmt.Printf("-----------------------------> %s\n", lowVersion)
-		fmt.Printf("< %s\n", highVersion)
+		//fmt.Printf("-----------------------------> %s\n", lowVersion)
+		//fmt.Printf("-----------------------------< %s\n", highVersion)
+		return []string{">", lowVersion, "<", highVersion}
 	}
 
 	// match operators constraints
@@ -255,13 +261,18 @@ func parseConstraint(constraint string) []string {
 		if stabilityModifier != "" && parseStability(version) == "stable" {
 			version = version + "-" + stabilityModifier
 		} else if result[1] == "<" {
-			result = RegFind(`(?i)-stable$`, result[2])
-			if result != nil {
+			match := RegFind(`(?i)-stable$`, result[2])
+			if match == nil {
 				version = version + "-dev"
 			}
 		}
 
-		fmt.Printf("---------- %s %s\n", result[1], version)
+		if len(result) > 1 && result[1] != "" {
+			//fmt.Printf("JODER:%s\n", strings.Join(result, "/"))
+			return []string{result[1], version}
+		} else {
+			return []string{"=", version}
+		}
 	}
 
 	return []string{constraint, stabilityModifier}
