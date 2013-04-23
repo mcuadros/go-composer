@@ -124,7 +124,16 @@ func normalizeBranch(name string) string {
 	return "dev-" + name
 }
 
-func parseConstraints(constraint string) []string {
+type Constraint struct {
+	Sign    string
+	Version string
+}
+
+func (self *Constraint) String() string {
+	return strings.Trim(self.Sign+" "+self.Version, " ")
+}
+
+func ParseConstraints(constraint string) []*Constraint {
 	result := RegFind(`(?i)^([^,\s]*?)@(stable|RC|beta|alpha|dev)$`, constraint)
 	if result != nil {
 		constraint = result[1]
@@ -143,22 +152,18 @@ func parseConstraints(constraint string) []string {
 	constraints := RegSplit(`\s*,\s*`, strings.Trim(constraint, " "))
 
 	if len(constraints) > 1 {
-		output := make([]string, 0)
+		output := make([]*Constraint, 0)
 		for _, part := range constraints {
 			output = append(output, parseConstraint(part)...)
 		}
 
 		return output
-	} else if len(constraints) == 0 {
-		return []string{"000000", constraint}
-	} else {
-		return parseConstraint(constraints[0])
 	}
 
-	return []string{"222333", constraint}
+	return parseConstraint(constraints[0])
 }
 
-func parseConstraint(constraint string) []string {
+func parseConstraint(constraint string) []*Constraint {
 
 	stabilityModifier := ""
 
@@ -172,7 +177,7 @@ func parseConstraint(constraint string) []string {
 
 	result = RegFind(`^[x*](\.[x*])*$`, constraint)
 	if result != nil {
-		return []string{"", ""}
+		return make([]*Constraint, 0)
 	}
 
 	highVersion := ""
@@ -211,9 +216,10 @@ func parseConstraint(constraint string) []string {
 			lowVersion = lowVersion + "-dev"
 		}
 
-		//fmt.Printf("----------------------------->= %s\n", lowVersion)
-		//fmt.Printf("-----------------------------< %s\n", highVersion)
-		return []string{">=", lowVersion, "<", highVersion}
+		return []*Constraint{
+			{">=", lowVersion},
+			{"<", highVersion},
+		}
 	}
 
 	result = RegFind(`^(\d+)(?:\.(\d+))?(?:\.(\d+))?\.[x*]$`, constraint)
@@ -241,16 +247,17 @@ func parseConstraint(constraint string) []string {
 		} else {
 			highVersion = result[1] + ".9999999.9999999.9999999"
 			if result[1] == "0" {
-				return []string{"", "", "<", highVersion}
+				return []*Constraint{{"<", highVersion}}
 			} else {
 				last, _ := strconv.Atoi(result[1])
 				lowVersion = strconv.Itoa(last-1) + ".9999999.9999999.9999999"
 			}
 		}
 
-		//fmt.Printf("-----------------------------> %s\n", lowVersion)
-		//fmt.Printf("-----------------------------< %s\n", highVersion)
-		return []string{">", lowVersion, "<", highVersion}
+		return []*Constraint{
+			{">", lowVersion},
+			{"<", highVersion},
+		}
 	}
 
 	// match operators constraints
@@ -268,14 +275,14 @@ func parseConstraint(constraint string) []string {
 		}
 
 		if len(result) > 1 && result[1] != "" {
-			//fmt.Printf("JODER:%s\n", strings.Join(result, "/"))
-			return []string{result[1], version}
+			return []*Constraint{{result[1], version}}
 		} else {
-			return []string{"=", version}
+			return []*Constraint{{"=", version}}
+
 		}
 	}
 
-	return []string{constraint, stabilityModifier}
+	return []*Constraint{{constraint, stabilityModifier}}
 }
 
 func parseStability(version string) string {
@@ -308,7 +315,14 @@ func parseStability(version string) string {
 	return "stable"
 }
 
-func RegFind(pattern string, subject string) []string {
+func RegReplace(pattern, replace, subject string) string {
+	reg := regexp.MustCompile(pattern)
+	matched := reg.ReplaceAllString(subject, replace)
+
+	return matched
+}
+
+func RegFind(pattern, subject string) []string {
 	reg := regexp.MustCompile(pattern)
 	matched := reg.FindAllStringSubmatch(subject, -1)
 
@@ -319,7 +333,7 @@ func RegFind(pattern string, subject string) []string {
 	return nil
 }
 
-func RegSplit(pattern string, subject string) []string {
+func RegSplit(pattern, subject string) []string {
 	reg := regexp.MustCompile(pattern)
 	indexes := reg.FindAllStringIndex(subject, -1)
 
