@@ -1,9 +1,14 @@
 package misc
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+var regexpSigns = regexp.MustCompile(`[_\-+]`)
+var regexpDotBeforeDigit = regexp.MustCompile(`([^.\d]+)`)
+var regexpMultipleDots = regexp.MustCompile(`\.{2,}`)
 
 var specialForms = map[string]int{
 	"dev":   -6,
@@ -18,44 +23,32 @@ var specialForms = map[string]int{
 	"pl":    1,
 }
 
-func prepVersion(version string) []string {
-	if len(version) == 0 {
-		return []string{""}
+func CompareVersion(version1, version2, operator string) bool {
+	compare := CompareVersionSimple(version1, version2)
+
+	switch {
+	case operator == ">" || operator == "gt":
+		return compare > 0
+	case operator == ">=" || operator == "ge":
+		return compare >= 0
+	case operator == "<=" || operator == "le":
+		return compare <= 0
+	case operator == "==" || operator == "=" || operator == "eq":
+		return compare == 0
+	case operator == "<>" || operator == "!=" || operator == "ne":
+		return compare != 0
+	case operator == "" || operator == "<" || operator == "lt":
+		return compare < 0
 	}
 
-	version = RegReplace(`[_\-+]`, ".", version)
-	version = RegReplace(`([^.\d]+)`, ".$1.", version)
-	version = RegReplace(`\.{2,}`, ".", version)
-
-	return strings.Split(version, ".")
-}
-
-func numVersion(value string) int {
-	if value == "" {
-		return 0
-	}
-
-	if number, err := strconv.Atoi(value); err == nil {
-		return number
-	}
-
-	if special, ok := specialForms[value]; ok {
-		return special
-	}
-
-	return -7
+	return false
 }
 
 func CompareVersionSimple(version1, version2 string) int {
-	compare := 0
-	x := 0
-	r := 0
-	l := 0
+	var x, r, l int = 0, 0, 0
 
-	v1 := prepVersion(version1)
-	v2 := prepVersion(version2)
-	len1 := len(v1)
-	len2 := len(v2)
+	v1, v2 := prepVersion(version1), prepVersion(version2)
+	len1, len2 := len(v1), len(v2)
 
 	if len1 > len2 {
 		x = len1
@@ -81,58 +74,39 @@ func CompareVersionSimple(version1, version2 string) int {
 		}
 
 		if r < l {
-			compare = -1
-			break
+			return -1
 		} else if r > l {
-			compare = 1
-			break
+			return 1
 		}
 	}
 
-	return compare
+	return 0
 }
 
-func CompareVersion(version1, version2, operator string) bool {
-	compare := CompareVersionSimple(version1, version2)
-
-	switch {
-	case operator == ">" || operator == "gt":
-		if compare > 0 {
-			return true
-		} else {
-			return false
-		}
-	case operator == ">=" || operator == "ge":
-		if compare >= 0 {
-			return true
-		} else {
-			return false
-		}
-	case operator == "<=" || operator == "le":
-		if compare <= 0 {
-			return true
-		} else {
-			return false
-		}
-	case operator == "==" || operator == "=" || operator == "eq":
-		if compare == 0 {
-			return true
-		} else {
-			return false
-		}
-	case operator == "<>" || operator == "!=" || operator == "ne":
-		if compare != 0 {
-			return true
-		} else {
-			return false
-		}
-	case operator == "" || operator == "<" || operator == "lt":
-		if compare < 0 {
-			return true
-		} else {
-			return false
-		}
+func prepVersion(version string) []string {
+	if len(version) == 0 {
+		return []string{""}
 	}
 
-	return false
+	version = regexpSigns.ReplaceAllString(version, ".")
+	version = regexpDotBeforeDigit.ReplaceAllString(version, ".$1.")
+	version = regexpMultipleDots.ReplaceAllString(version, ".")
+
+	return strings.Split(version, ".")
+}
+
+func numVersion(value string) int {
+	if value == "" {
+		return 0
+	}
+
+	if number, err := strconv.Atoi(value); err == nil {
+		return number
+	}
+
+	if special, ok := specialForms[value]; ok {
+		return special
+	}
+
+	return -7
 }
