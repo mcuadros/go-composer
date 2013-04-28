@@ -21,8 +21,15 @@ type Autoload struct {
 	Files    []string
 }
 
+func (self *Version) GoGetDependencies(c chan []*Version) {
+	misc.GetOutput().Error("New GoRutine")
+
+	c <- self.GetDependencies()
+}
+
 func (self *Version) GetDependencies() []*Version {
 	requires := make([]*Version, 0)
+	channels := make([]chan []*Version, 0)
 
 	for require, version := range self.Require {
 		if require == "php" {
@@ -33,6 +40,13 @@ func (self *Version) GetDependencies() []*Version {
 			continue
 		}
 
+		if version == "self.version" {
+			//misc.GetOutput().Error("Self.version: %s", self.Version)
+			version = self.Version
+		}
+
+		misc.GetOutput().Info("%s\n", version)
+
 		version, err := NewPckg(require).GetVersion(version)
 		if err != nil {
 			misc.GetOutput().Error(err.Error())
@@ -40,8 +54,16 @@ func (self *Version) GetDependencies() []*Version {
 		}
 
 		version.setRequiredBy(self)
-		requires = append(requires, version.GetDependencies()...)
+		channel := make(chan []*Version)
+		channels = append(channels, channel)
+		self.GoGetDependencies(channel)
+
 		requires = append(requires, version)
+	}
+
+	for _, channel := range channels {
+		misc.GetOutput().Error("Reading GoRutine")
+		requires = append(requires, <-channel...)
 	}
 
 	return requires

@@ -5,6 +5,8 @@ import (
 	"composer/net"
 	"encoding/json"
 	"fmt"
+	"github.com/mcuadros/go-version"
+	"sort"
 )
 
 type Pckg struct {
@@ -26,20 +28,21 @@ func NewPckg(name string) *Pckg {
 	return cache[name]
 }
 
-func (self *Pckg) GetVersion(name string) (*Version, error) {
+func (self *Pckg) GetVersion(versionConstraint string) (*Version, error) {
 	self.request()
 
-	if version, ok := self.Versions[name]; ok {
-		return version, nil
+	constraint := version.NewConstrainGroupFromString(versionConstraint)
+	for _, version := range sortVersions(self.Versions) {
+		if constraint.Match(version.Version) {
+			misc.GetOutput().Debug("Version matched %s = %s", versionConstraint, version.Version)
+			return version, nil
+		} else {
+			misc.GetOutput().Debug("Version un-matched %s = %s", versionConstraint, version.Version)
+
+		}
 	}
 
-	misc.GetOutput().Warning("cannot find given version %s at %s", name, self.Name)
-
-	for _, version := range self.Versions {
-		return version, nil
-	}
-
-	return nil, fmt.Errorf("cannot find given version %s at %s", name, self.Name)
+	return nil, fmt.Errorf("cannot find given version %s at %s, options:", versionConstraint, self.Name, self.Versions)
 }
 
 func (self *Pckg) GetName() string {
@@ -88,4 +91,43 @@ func (self *Pckg) addVersion(number string, version *Version) {
 	}
 
 	self.Versions[number] = version
+}
+
+type VersionSorter struct {
+	Normalized []string
+	Versions   []*Version
+}
+
+func sortVersions(m map[string]*Version) []*Version {
+	vs := &VersionSorter{
+		Normalized: make([]string, 0, len(m)),
+		Versions:   make([]*Version, 0, len(m)),
+	}
+
+	for _, v := range m {
+		normalized := version.Normalize(v.Version)
+
+		vs.Normalized = append(vs.Normalized, normalized)
+		vs.Versions = append(vs.Versions, v)
+	}
+
+	vs.Sort()
+	return vs.Versions
+}
+
+func (vs *VersionSorter) Sort() {
+	sort.Sort(vs)
+}
+
+func (vs *VersionSorter) Len() int {
+	return len(vs.Versions)
+}
+
+func (vs *VersionSorter) Less(i, j int) bool {
+	return vs.Normalized[i] < vs.Normalized[j]
+}
+
+func (vs *VersionSorter) Swap(i, j int) {
+	vs.Versions[i], vs.Versions[j] = vs.Versions[j], vs.Versions[i]
+	vs.Normalized[i], vs.Normalized[j] = vs.Normalized[j], vs.Normalized[i]
 }

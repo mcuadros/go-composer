@@ -4,3 +4,6 @@
 [submodule "src/github.com/jessevdk/go-flags"]
 	path = src/github.com/jessevdk/go-flags
 	url = git@github.com:jessevdk/go-flags.git
+[submodule "src/github.com/mcuadros/go-version"]
+	path = src/github.com/mcuadros/go-version
+	url = git@github.com:mcuadros/go-version.git
