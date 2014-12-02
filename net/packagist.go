@@ -1,12 +1,12 @@
 package net
 
 import (
-	"composer/misc"
-
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/mcuadros/go-composer/misc"
 )
 
 type Packagist struct {

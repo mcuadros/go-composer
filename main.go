@@ -1,9 +1,10 @@
 package main
 
 import (
-	"composer/command"
-	"github.com/jessevdk/go-flags"
 	"os"
+
+	"github.com/jessevdk/go-flags"
+	"github.com/mcuadros/go-composer/command"
 )
 
 func main() {

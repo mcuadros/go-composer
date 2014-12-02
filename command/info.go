@@ -1,8 +1,8 @@
 package command
 
 import (
-	"composer/misc"
-	"composer/pckg"
+	"github.com/mcuadros/go-composer/misc"
+	"github.com/mcuadros/go-composer/pckg"
 )
 
 type Info struct {

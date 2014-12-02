@@ -1,9 +1,10 @@
 package pckg
 
 import (
-	"composer/misc"
 	"fmt"
 	"strings"
+
+	"github.com/mcuadros/go-composer/misc"
 )
 
 type Version struct {

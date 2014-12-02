@@ -1,12 +1,13 @@
 package pckg
 
 import (
-	"composer/misc"
-	"composer/net"
 	"encoding/json"
 	"fmt"
-	"github.com/mcuadros/go-version"
 	"sort"
+
+	"github.com/mcuadros/go-composer/misc"
+	"github.com/mcuadros/go-composer/net"
+	"github.com/mcuadros/go-version"
 )
 
 type Pckg struct {
